@@ -27,16 +27,20 @@ past the end. That is the app's behaviour and it is worth preserving, because a
 truncated parameter reply is a normal condition on a noisy USB link and should
 degrade to "no value" rather than an exception.
 
-Decoded values are widened to ``float`` for the whole ``UINT64`` / ``INT64``
-range. That is lossy above 2**53 and is flagged rather than hidden — see
-:func:`decode_value`.
+
+**Where this deliberately diverges from Free Fly.** The app's
+``DroneRepository.parseRawValue`` returns a Kotlin ``Double``, so every value —
+including 64-bit integers — passes through double precision and anything above
+2**53 is silently rounded by the app. ``flylib`` returns the **exact Python
+int** for the integer types and raises :attr:`DecodedValue.lossy` instead. That
+is an improvement, not a reproduction: when describing what Free Fly does, its
+parameter values are double-precision and 64-bit integers are not exact.
 """
 from __future__ import annotations
 
 import dataclasses
 import enum
 import struct
-
 
 class ParamType(enum.IntEnum):
     """Type id as carried on the wire and declared by the app's enum."""

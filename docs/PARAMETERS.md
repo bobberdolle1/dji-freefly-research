@@ -56,6 +56,20 @@ flags and sensor/gain tuning rather than user-facing values. The complete
 absence of 64-bit and 32-bit signed integers is consistent with a catalogue
 collected from consumer aircraft rather than from a full firmware dump.
 
+### The catalogue's index space is not a table
+
+There is **no table number** in the asset — only `{i, t, n}` — so this is a
+single flat index space.
+
+**INFERENCE (open).** That flat space is *consistent with* the 2017 protocol
+being index-addressed, but the join is **not pinned**: the code mapping a
+catalogue index to the `(tableNo, paramIndex)` pair used by `loadIndexMap` /
+`readByIndexMap` has not been traced. Whether `i` is a global index or a
+per-table index that happens to be globally unique is therefore
+**unresolved**, and every index must be treated as model-specific until that
+join is found.
+
+
 ---
 
 ## 3. Aliases — the `|` convention

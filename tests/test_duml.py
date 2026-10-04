@@ -107,12 +107,20 @@ def test_crc16_step_is_the_standard_reflected_step():
 
 
 def test_crc16_parameters_are_x25_with_a_dji_init():
-    """Poly 0x1021 reflected, init 0x3692, xorout 0 — X-25 otherwise."""
+    """Poly 0x1021 reflected, init 0x3692, xorout 0 — X-25 otherwise.
+
+    The check value below is a *characterisation of the parameters*, not an
+    independent oracle: 0x7109 is what init 0x3692 / xorout 0 produce for
+    "123456789", whereas standard CRC-16/X-25 gives 0x906E. They differ only
+    because of the init. The table this is computed from is separately pinned
+    against the APK's own in ``test_crc16_table_matches_the_apk``, so this test
+    is asserting the init and xorout, not the table.
+    """
     from flylib.crc import CRC16_INIT, CRC16_POLY, CRC16_XOROUT
     assert CRC16_POLY == 0x8408      # reflection of 0x1021
     assert CRC16_INIT == 0x3692
     assert CRC16_XOROUT == 0x0000
-    assert crc16(b"123456789") == 0x7109
+    assert crc16(b"123456789") == 0x7109   # != X-25's 0x906E, by design
 
 
 # --------------------------------------------------------------------------

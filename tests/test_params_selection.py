@@ -22,11 +22,11 @@ sys.path.insert(0, os.path.join(REPO, "research"))
 from flylib import commands as C  # noqa: E402
 from flylib.params import (DecodedValue, MalformedParameter, ParamType,  # noqa: E402
                            WIDTH, decode_value, encode_value)
-from flylib.selection import (PROTOCOL_2015, PROTOCOL_2017,  # noqa: E402
+from flylib import selection  # noqa: E402
+from flylib.selection import (ACTIVE_PROTOCOL, PROTOCOL_2017,  # noqa: E402
                               IndexMapStore, select_parameters)
 
 
-# --------------------------------------------------------------------------
 # Type table
 # --------------------------------------------------------------------------
 
@@ -163,17 +163,16 @@ def test_2017_is_index_addressed_and_2015_is_name_hashed():
 # --------------------------------------------------------------------------
 
 class FakeSource:
-    """Stands in for the aircraft.
+    """Stands in for the aircraft over the 2017 protocol only.
 
-    ``table_counts`` maps table number to declared count; a table absent from the
-    map behaves like one that never answers.
+    ``table_counts`` maps table number to declared count; a table absent from
+    the map behaves like one that never answers.
     """
 
-    def __init__(self, table_counts: dict[int, int], eol_at: int = 3,
+    def __init__(self, table_counts: dict[int, int],
                  silent_tables: set[int] | None = None) -> None:
         self.table_counts = table_counts
         self.silent_tables = silent_tables or set()
-        self.eol_at = eol_at
         self.reads: list[tuple] = []
 
     def table_attribs_2017(self, table_no: int) -> int | None:
@@ -185,12 +184,14 @@ class FakeSource:
         self.reads.append(("2017", table_no, param_index))
         return f"t{table_no}p{param_index}"
 
-    def read_by_hash_2015(self, index: int):
-        self.reads.append(("2015", index, None))
-        return f"legacy{index}"
 
-    def eol_2015(self, index: int) -> bool:
-        return index >= self.eol_at
+def test_2017_is_the_only_protocol_the_model_can_return():
+    """readAll2015 is unreachable, so there is no 2015 outcome to return."""
+    assert ACTIVE_PROTOCOL == "2017"
+    assert not hasattr(selection, "PROTOCOL_2015")
+    for counts, tbls in [({0: 3, 1: 2}, (0, 1)), ({}, (0,)), ({0: 0}, (0, 1))]:
+        assert select_parameters(FakeSource(counts), "M300RTK",
+                                 tables=tbls).protocol == PROTOCOL_2017
 
 
 def test_2017_is_selected_when_a_table_declares_parameters():
@@ -198,40 +199,52 @@ def test_2017_is_selected_when_a_table_declares_parameters():
     result = select_parameters(source, "M300RTK", tables=(0, 1))
     assert result.protocol == PROTOCOL_2017
     assert result.values == ["t0p0", "t0p1", "t0p2", "t1p0", "t1p1"]
-    assert result.used_fallback is False
+    assert result.skipped_tables == []
 
 
-def test_falls_back_to_2015_when_every_table_is_empty():
+def test_empty_table_is_skipped_without_changing_protocol():
+    """The 'falling back to 2015' string is a log line, not a fallback."""
     source = FakeSource({})
-    result = select_parameters(source, "M300RTK")
-    assert result.protocol == PROTOCOL_2015
-    assert result.values == ["legacy0", "legacy1", "legacy2"]
-    assert "2015 EOL at index 3" in result.diagnostics
+    result = select_parameters(source, "M300RTK", tables=(0,))
+    assert result.protocol == PROTOCOL_2017
+    assert result.values == []
+    assert [t.table_no for t in result.skipped_tables] == [0]
 
 
-def test_falls_back_when_tables_do_not_answer_at_all():
+def test_unanswered_tables_are_skipped_and_logged():
     """A silent table is the realistic failure: busy link, wrong device."""
-    source = FakeSource({0: 0, 1: 0})
     silent = FakeSource(table_counts={}, silent_tables={0, 1, 2, 3})
     result = select_parameters(silent, "M300RTK", tables=(0, 1, 2, 3))
-    assert result.protocol == PROTOCOL_2015
-    assert result.used_fallback is True
-    assert any("no response" in d for d in result.diagnostics)
+    assert result.protocol == PROTOCOL_2017
+    assert result.values == []
+    assert [t.table_no for t in result.skipped_tables] == [0, 1, 2, 3]
+    assert all("no response" in d for d in result.diagnostics if "Table" in d)
 
 
-def test_partial_fallback_keeps_2017_and_marks_the_bad_table():
+def test_empty_table_diagnostic_matches_the_apps_literal():
+    """Reproduced verbatim, including the misleading 'falling back' wording."""
+    source = FakeSource({})
+    result = select_parameters(source, "M300RTK", tables=(0,))
+    assert result.diagnostics[0] == (
+        "Full scan for M300RTK (first time)")
+    assert result.diagnostics[1] == (
+        "Table 0 empty or no response, falling back to 2015")
+
+
+def test_partial_tables_still_return_2017_for_the_good_ones():
     source = FakeSource({0: 2, 1: 0, 2: 1})
     result = select_parameters(source, "M300RTK", tables=(0, 1, 2))
     assert result.protocol == PROTOCOL_2017
-    assert [t.used_2017 for t in result.tables if t.table_no in (0, 1, 2)] == [True, False, True]
-    assert result.used_fallback is True
+    assert result.values == ["t0p0", "t0p1", "t2p0"]
+    assert [t.used for t in result.tables] == [True, False, True]
 
 
-def test_fallback_diagnostic_matches_the_apps_literal():
-    source = FakeSource({})
-    result = select_parameters(source, "M300RTK")
-    assert any(d == "Table 0 empty or no response, falling back to 2015"
-               for d in result.diagnostics)
+def test_no_2015_traffic_is_ever_generated():
+    """The model must not read through the 2015 path under any input."""
+    for counts, tbls in [({0: 3}, (0,)), ({}, (0, 1, 2)), ({0: 1, 1: 1}, (0, 1))]:
+        source = FakeSource(counts)
+        select_parameters(source, "M300RTK", tables=tbls)
+        assert all(r[0] == "2017" for r in source.reads)
 
 
 # --------------------------------------------------------------------------

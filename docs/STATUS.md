@@ -75,9 +75,9 @@ Required table: `SAMPLE | SHA256 | ANALYZED | TRANSPORT | DUML | PARAMS | FCC | 
 
 | SAMPLE | SHA256 (first 16) | ANALYZED | TRANSPORT | DUML | PARAMS | FCC | BACKEND | NOTES |
 |---|---|---|---|---|---|---|---|---|
-| `FF_v_1_00.apk` (Free Fly 1.0) | `a6dc898ddcec0e9e` | ✅ Stages 1–4 | **USB host bulk** (raw bulk, no CDC-ACM), VID `0x2CA3`, PID `0x10/0x18/0x20` | ✅ recovered, tested | 🔄 selection structure pinned | ❌ **none found** | **none** — no INTERNET perm, no HTTP lib, no endpoints | Debug-signed, debuggable, unobfuscated, 10 DEX, no native app code; FC Assistant parameter protocol only — no RCLink, no FCC/profile, no service-mode |
+| `FF_v_1_00.apk` (Free Fly 1.0) | `a6dc898ddcec0e9e` | ✅ Stages 1–4, 6 | **USB host bulk** (raw bulk, no CDC-ACM), VID `0x2CA3`, PID `0x10/0x18/0x20` | ✅ recovered, tested | ✅ 2017-only; `readAll2015` is dead code | ⚠️ **no FCC command sequence**, but **region params present and writable via the FC parameter path** (`ce_country_type` idx 687, `ce_regulatory_level` idx 858) | **none** — no INTERNET perm, no HTTP lib, no endpoints | Debug-signed, debuggable, unobfuscated, 10 DEX, no native app code. No RCLink/FCC-profile/service-mode constructs among the 14 named builders or `DumlConstants`; `writeParamValue2017` is the only live parameter write |
 | `nldfcc.apk` (NLD FCC) | `4a6e07a2ee1fbd7f` | ⚠️ partial | 🔄 | 🔄 | ⬜ | 🔄 | 🔄 | 7,269,392 bytes, 2 DEX; worker killed before report |
-| `dh_v1.48_signed.exe` (Drone-Hacks 1.48) | `236dd98439e503c6` | ⚠️ partial | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 | 25,944,848 bytes, PE32+ x86-64, 7 sections; PyInstaller/Cython Python 3.11 onefile |
+| `dh_v1.48_signed.exe` (Drone-Hacks 1.48) | `236dd98439e503c6` | ⚠️ partial | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 | 25,944,848 bytes, PE32+ x86-64, 7 sections. **FACT:** PyInstaller onefile, Python 3.11 — `MEI\x0c\x0b\x0a\x0b\x0e` overlay magic at offset `0x18bba6e`, `pyi-`×5, `PyInstaller`×3, `_MEIPASS`×3, `pyiboot`×1, tag `python311`. The worker's "Cython" claim is **not supported**: the string `Cython` occurs 0 times |
 
 Full identity records (sizes, SHA-1/MD5, sources, acquisition dates, metadata
 confidence) live in the gitignored `research/corpus/registry.json`, produced by

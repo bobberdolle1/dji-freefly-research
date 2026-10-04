@@ -82,7 +82,7 @@ flowchart TD
     RP --> LM[loadIndexMap codename]
     LM -->|hit| RBM[readByIndexMap]
     LM -->|miss| S17[readAll2017]
-    S17 -->|table empty| S15[readAll2015]
+    S17 -->|table empty| SKIP[skip table, log diagnostic]
     S17 --> SIM[saveIndexMap]
     RP --> U[unlock / assistantUnlock]
     U --> FD[fetchDeviceInfo]
@@ -196,54 +196,75 @@ and contains the literal diagnostic string:
 "Table " + tableNo + " empty or no response, falling back to 2015"
 ```
 
-emitted when a table's declared count is zero. So **a 2017→2015 fallback
-exists**, and it is driven per-table by an empty or unanswered
-`getTableAttribs2017`.
 
-**FACT.** `readAll2015` contains the literal string `"2015 EOL at index "`,
-confirming the 2015 protocol is walked until an explicit end-of-list marker
-rather than to a known count.
+**FACT.** `readAll2015` — which turns out to be dead code, see below — contains
+the literal string `"2015 EOL at index "`, so the 2015 walk terminates on an
+explicit end-of-list marker rather than a known count.
+
 
 **FACT.** Index maps are cached under the filename suffix `_index_map.json`,
 keyed by the aircraft codename (`DroneRepository.cacheFile`), with
 `loadIndexMap` / `saveIndexMap` / `clearCache` as the accessors.
 
+### Confirmed structure, and one correction
+
+**FACT.** `DroneRepository.readAllParameters` — decoded from
+`DroneRepository.smali:9668-10086`:
+
+```
+codename = droneInfo.type                      // the AC's model codename
+if (!force):
+    map = loadIndexMap(codename)
+    if map != null:
+        diag("Cache hit for <codename>: N known indices — fast read")
+        return readByIndexMap(map)             // log "Fast read done: N"
+diag("Full scan for <codename> (first time)")
+list = readAll2017()
+diag("Scan done: N")
+... saveIndexMap(codename, list)
+return Success(list)
+```
+
+**FACT — the app is 2017-only, and the "fallback to 2015" is a dead end.**
+`readAll2017` contains the literal string `"Table N empty or no response,
+falling back to 2015"`, which reads like a per-table protocol fallback. It is
+not one. Verified across the whole decoded tree:
+
+| Check | Result |
+|---|---|
+| `invoke-direct` to `readAll2017` | line **10001**, inside `readAllParameters` — the only live bulk-read path |
+| `invoke-direct` to `readAll2015` | line **751** only, which is *inside* `access$readAll2015` (745-755) itself |
+| `access$readAll2015` references in the entire tree | exactly **one**: `DroneRepository$readAll2015$1.smali:145`, its own coroutine continuation — the normal Kotlin self-resume pattern, not a caller |
+| commands used by `readByIndexMap` | `readParamValue2017` only |
+| commands used by `readAll2017` | `getTableAttribs2017`, `getParamInfo2017`, `readParamValue2017` |
+| commands used by `readAll2015` | `getParamInfoByIndex2015`, `readParamValue2015` |
+
+**Conclusion — FACT.** `readAll2015` is unreachable dead code. An aircraft
+whose tables all report zero parameters gets an **empty result and a log
+line**, not a 2015 scan. The message is misleading; it is a leftover.
+
+**FACT — live vs dead commands.** Call-site counts across the decoded tree:
+
+| Command | Callers | Live? |
+|---|---|---|
+| `assistantUnlock` | 2 | ✅ |
+| `readParamValue2017` | 3 | ✅ |
+| `getCfgFileChunk`, `getParamInfo2017`, `getTableAttribs2017`, `writeParamValue2017`, `versionInquiry`, `versionInquiryTo`, `replyRegAck`, `replyRegDev` | 1 each | ✅ |
+| `getParamInfoByIndex2015`, `readParamValue2015` | 1 each | ❌ only from dead `readAll2015` |
+| `getParamInfo2015`, `writeParamValue2015` | **0** | ❌ never called |
+
+**INFERENCE.** Free Fly **writes parameters exclusively through the 2017
+protocol** (`writeParamValue2017`). Its 2015 read/write builders exist in the
+binary but nothing invokes them. This materially changes the comparative
+picture: an FC parameter write is always `cmdSet 3 / cmdId 0xE3` with a
+`(table, index, reserved, index, value)` payload.
+
 **Not pinned — stated rather than guessed.** The exact interaction between
-`force` and the empty-list test at the end of `readAllParameters` is not
-resolved here: the `XOR` operand that `isEmpty()` is combined with is a value
-that may be the `force` flag or a size register, and the coroutine's state object
-moves it through registers in a way that makes a one-line reading unsafe. The
-*structure* — index-map fast path, else 2017 full scan, per-table fallback to
-2015, then save the map — is confirmed. The precise `force` semantics are
-**HYPOTHESIS** pending a cleaner read of that function, and no code in
-`flylib` encodes a guess about them.
-
----
-
-## 5. Concurrency, timeouts, matching, errors
-
-**FACT.** Everything long-running is a coroutine. `DroneRepository`'s methods
-are `suspend` and use `awaitPacket`, which collects the `packets` SharedFlow
-with a timeout and applies a predicate to select the matching reply.
-
-**FACT.** The two timeouts that are visible in the USB layer are 2000 ms for
-both read and write transfers, and 200 ms for the connect-time init burst.
-
-**FACT.** Errors are modelled explicitly: `UsbState.Error`,
-`ConnectionState.Error` (`Searching` / `Connected` / `Disconnected` / `Error`),
-and `RepoResult.Failure`, so failures are values rather than thrown exceptions
-across the repository boundary.
-
-**INFERENCE.** Because the packet flow is a hot `SharedFlow` with replay 0 and
-a 256-slot buffer, a slow consumer can lose packets rather than block the read
-loop. That is the right trade for a continuous telemetry-ish stream, and it
-means a caller that stalls can silently miss a reply. The clean-room
-`Session` keeps a single persistent parser per session for the same reason a
-caller must not assume replies arrive whole.
-
----
-
-## 6. State machines
+`force` and the empty-result test at the end of `readAllParameters` is not
+resolved: the operand `isEmpty()` is XORed with is a register that the
+coroutine state object moves ambiguously, and it may be the `force` flag or a
+size. The *structure* is confirmed; the `force` semantics are **HYPOTHESIS**
+pending a cleaner read, and `flylib.selection` does not encode a guess.
 
 **Connection** (`UsbState`): `Disconnected → WaitingPermission → Connected`,
 with `Error` reachable from any step (permission refused, `openDevice` null, no
@@ -265,16 +286,30 @@ Stated explicitly because several are easy to assume from the "DJI hacking"
 framing, and their absence is itself a finding:
 
 - **FACT.** No RCLink framing, no `com.dji.logiclink` / `com.dji.protocol`
-  classes, no local socket or loopback TCP transport.
-- **FACT.** No radio-region, FCC profile, service-mode or C0 command anywhere in
-  the fourteen builders in `DroneCommands`.
+  classes, no local socket or loopback TCP transport anywhere in the DEX.
+- **FACT (scoped).** No radio-region, FCC-profile, service-mode or C0 command
+  appears among the **fourteen named `DroneCommands` builders** or in
+  `DumlConstants`. This is an absence *within that search*, not a proof of
+  absence: a sequence could in principle be assembled inline from generic
+  cmdSet/cmdId values with no named constant and no builder method. No such
+  inline construction was found, but the claim is bounded by what was searched.
 - **FACT.** No firmware container, patcher or flasher.
-- **FACT.** Everything is **FC Assistant parameter protocol** over direct USB
-  bulk.
+- **FACT.** The live read and write paths are **FC Assistant parameter
+  protocol** over direct USB bulk, 2017 protocol only.
+
+**Correction made during analysis.** An earlier draft of this section stated
+"Everything is FC Assistant parameter protocol only — no FCC, no region tool"
+flatly, and modelled a live 2017→2015 fallback. Both were wrong: `readAll2015`
+is unreachable, and the catalogue does contain the region parameters
+`ce_country_type` and `ce_regulatory_level`. See
+`docs/PARAMETERS.md` §5 — the accurate claim is *mechanism-disjoint from the
+FCC tools but overlapping in effect*.
 
 **INFERENCE.** Free Fly is a parameter reader/editor for the flight controller
-reached over USB, not an FCC/region tool. If it can affect region settings at
-all, it would be by writing FC parameters — which is a different mechanism from
-the FCC command sequences used by the tools in the comparative corpus. That
-distinction is the central question for the comparative report and is carried
-into Stage 7.
+reached over USB, and reaches region state by writing FC parameters rather
+than by issuing FCC command sequences. That makes it **mechanism-disjoint from
+the FCC tools while overlapping in effect**: neither "it is an FCC tool" nor
+"it is a harmless parameter browser" survives the evidence. The precise
+remaining question — whether a `ce_country_type` write actually takes — is
+unanswerable without hardware and is carried into Stage 7 and
+`docs/HARDWARE_TEST_PLAN.md`.
