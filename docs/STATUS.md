@@ -13,31 +13,61 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started · ⚠️ blocked
 
 | Stage | Subject | Status | Output |
 |---|---|---|---|
-| 1 | Baseline and provenance | ✅ | `docs/PROVENANCE.md` |
-| 2 | Architecture reconstruction | 🔄 | `docs/ARCHITECTURE.md` |
-| 3 | DUML binary format | ⬜ | `docs/DUML.md` + golden-vector tests |
-| 4 | DroneCommands transaction map | ⬜ | `docs/COMMAND_MAP.md` |
-| 5 | DroneRepository | ⬜ | code + hardware-free unit tests |
-| 6 | Parameter catalogue | ⬜ | `docs/PARAMETERS.md` |
-| 7 | Free Fly vs Drone-Hacks / FreeFCC | ⬜ | `docs/FINAL_REPORT.md` |
-| 8 | Clean read-only implementation | ⬜ | `research/` package + tests |
-| W | Write/mutation path (guarded) | ⬜ | dry-run + disabled-by-default guard |
-| H | Hardware test plan | ⬜ | `docs/HARDWARE_TEST_PLAN.md` |
+| 1 | Baseline and provenance | ✅ done | `docs/PROVENANCE.md` |
+| 2 | Architecture reconstruction | ✅ done | `docs/ARCHITECTURE.md` |
+| 3 | DUML binary format | ✅ done | `flylib/crc.py`, `flylib/packet.py` + golden-vector tests |
+| 4 | DroneCommands transaction map | ✅ done | `research/generated/freefly_commands.json` (14 builders) |
+| 5 | DroneRepository | 🔄 partial | USB layer + selection structure pinned; `force` semantics open |
+| 6 | Parameter catalogue | ⬜ | |
+| 7 | Free Fly vs Drone-Hacks / FreeFCC | ⬜ | |
+| 8 | Clean read-only implementation | 🔄 partial | codec, framer, commands, guard, 4 transports, 111 tests |
+| W | Write/mutation path (guarded) | ✅ done | `flylib/guard.py`; disabled by default, dry-run default |
+| H | Hardware test plan | ⬜ | |
 
 ## Comparative corpus status
 
-| Workstream | Subject | Status | Output |
+All four comparative workers ran ~52 minutes and were then killed by an
+infrastructure failure (`getaddrinfo ENOTFOUND openrouter.ai`) before writing
+their report files. Their findings survive in transcripts, not on disk. They
+are **not** counted as delivered; the primary Free Fly path was not blocked on
+them.
+
+| Workstream | Subject | Status | Note |
 |---|---|---|---|
-| C1 | NLD FCC APK baseline | 🔄 | `research/reports/nldfcc_baseline.md` |
-| C2 | Drone-Hacks 1.48 EXE baseline | 🔄 | `research/reports/dronehacks_baseline.md` |
-| C3 | Public open-source corpus (pinned) | 🔄 | `research/reports/public_corpus.md` |
-| C4 | redfly.app / djifcc.app web research | 🔄 | `research/reports/web_sources.md` |
-| C5 | Normalized command database | ⬜ | `docs/COMMAND_CORPUS.md` + `research/generated/command_corpus.json` |
-| C6 | Transport matrix | ⬜ | `docs/TRANSPORT_MATRIX.md` |
-| C7 | App/build lineage | ⬜ | `docs/APP_LINEAGE.md` |
-| C8 | Network/backend map | ⬜ | `docs/BACKENDS.md` |
-| C9 | Ecosystem classification | ⬜ | `docs/ECOSYSTEM_MAP.md` |
-| C10 | Comparative report | ⬜ | `docs/COMPARATIVE_REPORT.md` |
+| C1 | NLD FCC APK baseline | ⚠️ partial | report never written; no files deposited |
+| C2 | Drone-Hacks 1.48 EXE baseline | ⚠️ partial | identified as a PyInstaller/Cython Python 3.11 onefile; report never written. `tools/pe_baseline.py` was committed |
+| C3 | Public open-source corpus | ⚠️ partial | five repos cloned and pinned; report never written. Findings corroborate the DUML work (see below) |
+| C4 | redfly.app / djifcc.app | ⚠️ partial | artifacts downloaded; report never written |
+| C5 | Normalized command database | ⬜ | |
+| C6 | Transport matrix | ⬜ | |
+| C7 | App/build lineage | ⬜ | |
+| C8 | Network/backend map | ⬜ | |
+| C9 | Ecosystem classification | ⬜ | |
+| C10 | Comparative report | ⬜ | |
+
+### Salvaged from the killed C3 worker — unverified by this project
+
+These came from the worker's transcript, which died before writing a report.
+They are recorded because several **independently corroborate** conclusions
+reached independently from Free Fly's own bytecode. They are **not** treated as
+verified evidence and must be re-derived before being published in any report.
+
+- DJI CRC-16 characterised as **X-25 with init `0x3692`, xorout `0x0000`**, and
+  the header as little-endian — matching `flylib/crc.py` and `flylib/packet.py`,
+  which were derived from the APK's tables before this worker reported anything.
+- `cmdSet 3 / cmdId 0xF9` identified as "Write Param By Hash", i.e. the 2015
+  hashed write. Consistent with Free Fly's `CMD_FC_PARAM_WRITE_2015 = -7`
+  (`0xF9`) on cmdSet `CMD_SET_FC`.
+- The 2017 parameter protocol is **index-addressed, not name-hashed** — exactly
+  what Free Fly's `readParamValue2017(tableNo, paramIndex)` does.
+- A 21-frame FCC sequence reconstructed from a FreeFCC profile.
+- `DJI-FCC-Unlock-iOS` is licensed **PolyForm Noncommercial 1.0.0**, i.e. source
+  available but *not* OSI open source. Worth recording before quoting it.
+- A repo impersonating `doesthings/FreeFCC` by name carries a 489 KB `.zip`
+  inside `src/main/java/`. It was correctly **not** retrieved. Treat any
+  "FreeFCC" fork of unknown provenance as suspect.
+- Local port convention: FreeFCC uses `40009`; the `djiparam` project uses
+  `40008` (inject) / `40007` (read).
 
 ## Sample register
 
@@ -45,9 +75,9 @@ Required table: `SAMPLE | SHA256 | ANALYZED | TRANSPORT | DUML | PARAMS | FCC | 
 
 | SAMPLE | SHA256 (first 16) | ANALYZED | TRANSPORT | DUML | PARAMS | FCC | BACKEND | NOTES |
 |---|---|---|---|---|---|---|---|---|
-| `FF_v_1_00.apk` (Free Fly 1.0) | `a6dc898ddcec0e9e` | ✅ Stage 1 | USB host serial, VID `0x2CA3` | 🔄 | 🔄 (`assets/params_catalog.json`) | ⬜ | **none** — no INTERNET perm, no HTTP lib, no endpoints | Debug-signed, debuggable, unobfuscated, 10 DEX, no native app code |
-| `nldfcc.apk` (NLD FCC) | `4a6e07a2ee1fbd7f` | 🔄 C1 | 🔄 | 🔄 | ⬜ | 🔄 | 🔄 | 7,269,392 bytes, 2 DEX |
-| `dh_v1.48_signed.exe` (Drone-Hacks 1.48) | `236dd98439e503c6` | 🔄 C2 | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 | 25,944,848 bytes, PE32+ x86-64, 7 sections |
+| `FF_v_1_00.apk` (Free Fly 1.0) | `a6dc898ddcec0e9e` | ✅ Stages 1–4 | **USB host bulk** (raw bulk, no CDC-ACM), VID `0x2CA3`, PID `0x10/0x18/0x20` | ✅ recovered, tested | 🔄 selection structure pinned | ❌ **none found** | **none** — no INTERNET perm, no HTTP lib, no endpoints | Debug-signed, debuggable, unobfuscated, 10 DEX, no native app code; FC Assistant parameter protocol only — no RCLink, no FCC/profile, no service-mode |
+| `nldfcc.apk` (NLD FCC) | `4a6e07a2ee1fbd7f` | ⚠️ partial | 🔄 | 🔄 | ⬜ | 🔄 | 🔄 | 7,269,392 bytes, 2 DEX; worker killed before report |
+| `dh_v1.48_signed.exe` (Drone-Hacks 1.48) | `236dd98439e503c6` | ⚠️ partial | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 | 25,944,848 bytes, PE32+ x86-64, 7 sections; PyInstaller/Cython Python 3.11 onefile |
 
 Full identity records (sizes, SHA-1/MD5, sources, acquisition dates, metadata
 confidence) live in the gitignored `research/corpus/registry.json`, produced by
