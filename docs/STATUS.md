@@ -35,9 +35,9 @@ them.
 | Workstream | Subject | Status | Note |
 |---|---|---|---|
 | C1 | NLD FCC APK baseline | ⚠️ partial | report never written; no files deposited |
-| C2 | Drone-Hacks 1.48 EXE baseline | ⚠️ partial | identified as a PyInstaller/Cython Python 3.11 onefile; report never written. `tools/pe_baseline.py` was committed |
+| C2 | Drone-Hacks 1.48 EXE baseline | ⚠️ partial | **PyInstaller onefile / CPython 3.11 anchored to disk** (not Cython — see sample register). Full report never written. `tools/pe_baseline.py` was committed |
 | C3 | Public open-source corpus | ⚠️ partial | five repos cloned and pinned; report never written. Findings corroborate the DUML work (see below) |
-| C4 | redfly.app / djifcc.app | ⚠️ partial | artifacts downloaded; report never written |
+| C4 | redfly.app / djifcc.app | ✅ **recovered** | 18 APKs acquired and registered, including **stock DJI Fly** baselines. Differential written up in `research/reports/djifcc_differential.md`. redfly.app still outstanding |
 | C5 | Normalized command database | ⬜ | |
 | C6 | Transport matrix | ⬜ | |
 | C7 | App/build lineage | ⬜ | |
@@ -77,7 +77,12 @@ Required table: `SAMPLE | SHA256 | ANALYZED | TRANSPORT | DUML | PARAMS | FCC | 
 |---|---|---|---|---|---|---|---|---|
 | `FF_v_1_00.apk` (Free Fly 1.0) | `a6dc898ddcec0e9e` | ✅ Stages 1–4, 6 | **USB host bulk** (raw bulk, no CDC-ACM), VID `0x2CA3`, PID `0x10/0x18/0x20` | ✅ recovered, tested | ✅ 2017-only; `readAll2015` is dead code | ⚠️ **no FCC command sequence**, but **region params present and writable via the FC parameter path** (`ce_country_type` idx 687, `ce_regulatory_level` idx 858) | **none** — no INTERNET perm, no HTTP lib, no endpoints | Debug-signed, debuggable, unobfuscated, 10 DEX, no native app code. No RCLink/FCC-profile/service-mode constructs among the 14 named builders or `DumlConstants`; `writeParamValue2017` is the only live parameter write |
 | `nldfcc.apk` (NLD FCC) | `4a6e07a2ee1fbd7f` | ⚠️ partial | 🔄 | 🔄 | ⬜ | 🔄 | 🔄 | 7,269,392 bytes, 2 DEX; worker killed before report |
-| `dh_v1.48_signed.exe` (Drone-Hacks 1.48) | `236dd98439e503c6` | ⚠️ partial | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 | 25,944,848 bytes, PE32+ x86-64, 7 sections. **FACT:** PyInstaller onefile, Python 3.11 — `MEI\x0c\x0b\x0a\x0b\x0e` overlay magic at offset `0x18bba6e`, `pyi-`×5, `PyInstaller`×3, `_MEIPASS`×3, `pyiboot`×1, tag `python311`. The worker's "Cython" claim is **not supported**: the string `Cython` occurs 0 times |
+| `dh_v1.48_signed.exe` (Drone-Hacks 1.48) | `236dd98439e503c6` | ⚠️ partial | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 | 25,944,848 bytes, PE32+ x86-64, 7 sections. **FACT:** PyInstaller onefile bundling CPython 3.11 — `MEI\x0c\x0b\x0a\x0b\x0e` overlay magic at offset `0x18bba6e`, `pyi-`×5, `PyInstaller`×3, `_MEIPASS`×3, `pyiboot`×1, tag `python311`. Not Cython-compiled |
+| DJIFCC Fly Android `1.21.12.19` | `d65c3608cd09ca77` | ✅ baseline | stock DJI Fly transport stack | n/a (no DUML layer of its own) | 🔄 | ✅ **patches the DJI app itself** | 🔄 unknown | package `dji.go.v5` — DJI's own. Re-signed `CN=DJIFCC.APP` (cert `cad73496…`), v2+v3, so **cannot** upgrade stock DJI Fly |
+| DJIFCC Fly RC2 V6 `1.21.10.43` | `e322fceead4b2543` | ✅ baseline | stock DJI Fly transport stack | n/a | 🔄 | ✅ patches the DJI app | 🔄 unknown | package `dji.go.v6`; same vendor cert; 24 DEX / 110 `.so` |
+| DJIFCC GO 4 `4.3.62` | `1d9fe6377f6f7224` | ✅ baseline | stock GO 4 transport stack | n/a | 🔄 | ✅ patches the DJI app | 🔄 unknown | package `dji.go.v4` — a different app family from Fly |
+| Stock DJI Fly RC2 `1.21.8` | `cfbf67368fa812c6` | ✅ baseline | — | — | — | — | ✅ INTERNET, 57 perms | `dji.go.v5`, signed `CN=dji`, v2-only, 22 DEX / 112 `.so`. Differential baseline |
+| `FCCInstaller` `1.2.1` | `cc9dbe9afb407dc4` | ✅ baseline | — | — | — | sideload helper | ✅ INTERNET | `com.djifcc.flyinstaller` — exists because the re-signed APK cannot upgrade stock DJI Fly |
 
 Full identity records (sizes, SHA-1/MD5, sources, acquisition dates, metadata
 confidence) live in the gitignored `research/corpus/registry.json`, produced by
