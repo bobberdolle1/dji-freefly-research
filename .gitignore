@@ -29,7 +29,7 @@
 samples/
 research/corpus/*
 research/proprietary/*
-research/public/
+research/public/*
 !research/corpus/.gitkeep
 !research/proprietary/.gitkeep
 !research/public/.gitkeep
