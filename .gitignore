@@ -1,0 +1,69 @@
+# Proprietary / acquired binaries MUST NEVER be committed.
+# Once a blob enters history it is published, and removing it later does not
+# un-publish it. Every rule below is a first line of defence.
+*.apk
+*.apks
+*.aab
+*.xapk
+*.apkm
+*.exe
+*.msi
+*.dll
+*.so
+*.dex
+*.jar
+*.ipa
+*.zip
+*.7z
+*.rar
+*.bin
+*.img
+*.tar
+*.gz
+*.dmg
+*.iso
+
+# Sample directories (working copies of operator-supplied artifacts).
+# Note: negating a file inside an ignored directory does not work, so the
+# directory contents are excluded rather than the directory itself.
+samples/
+research/corpus/*
+research/proprietary/*
+research/public/
+!research/corpus/.gitkeep
+!research/proprietary/.gitkeep
+!research/public/.gitkeep
+
+# Third-party open-source clones live in research/public/ and are never
+# committed; they are pinned by commit SHA in research/reports/ instead.
+
+# Decompiler / toolchain / scratch output. Reproducible via tools/*.py.
+work/
+
+# Generated reports that embed proprietary data
+research/generated/raw/
+*.der
+*.pem
+*.p12
+*.keystore
+*.jks
+keys/
+certs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
