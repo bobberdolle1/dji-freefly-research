@@ -33,16 +33,23 @@ Layout
 from .crc import crc8, crc16
 from .packet import (ACK_AFTER_EXEC, ACK_BEFORE_EXEC, ACK_NO_ACK, CMD_SET_COMMON,
                      CMD_SET_FC, DEV_CENTER, DEV_FC, DEV_PC, HEADER_SIZE, MAGIC,
-                     PKT_REQUEST, PKT_RESPONSE, Packet, build_packet,
-                     parse_header, parse_packet, unpack_dev_byte, pack_dev_byte)
+                     MIN_FRAME_SIZE, PKT_REQUEST, PKT_RESPONSE, Packet,
+                     build_packet, parse_header, parse_packet, pack_dev_byte,
+                     unpack_dev_byte)
 from .parser import StreamParser
 from .commands import SequenceCounter, param_hash
+from .guard import MutationGuard, MutationNotAllowed, is_state_changing
+from .transport import (DryRunTransport, LiveTransport, ReplayTransport,
+                        ScriptedTransport, Session, Transport)
 
 __all__ = [
-    "crc8", "crc16", "MAGIC", "HEADER_SIZE", "Packet", "build_packet",
-    "parse_packet", "parse_header", "pack_dev_byte", "unpack_dev_byte",
-    "DEV_PC", "DEV_FC", "DEV_CENTER", "CMD_SET_COMMON", "CMD_SET_FC",
-    "PKT_REQUEST", "PKT_RESPONSE", "ACK_NO_ACK", "ACK_BEFORE_EXEC",
-    "ACK_AFTER_EXEC", "StreamParser", "SequenceCounter", "param_hash",
+    "crc8", "crc16", "MAGIC", "HEADER_SIZE", "MIN_FRAME_SIZE", "Packet",
+    "build_packet", "parse_packet", "parse_header", "pack_dev_byte",
+    "unpack_dev_byte", "DEV_PC", "DEV_FC", "DEV_CENTER", "CMD_SET_COMMON",
+    "CMD_SET_FC", "PKT_REQUEST", "PKT_RESPONSE", "ACK_NO_ACK",
+    "ACK_BEFORE_EXEC", "ACK_AFTER_EXEC", "StreamParser", "SequenceCounter",
+    "param_hash", "MutationGuard", "MutationNotAllowed", "is_state_changing",
+    "Transport", "ReplayTransport", "ScriptedTransport", "DryRunTransport",
+    "LiveTransport", "Session",
 ]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

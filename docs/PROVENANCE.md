@@ -97,9 +97,9 @@ grants no capability to third parties and nothing outside the app.
 The brief asked us to confirm or refute a remote licence backend. Three
 independent lines of evidence all agree.
 
-**FACT — permission.** No `android.permission.INTERNET`. An Android app cannot
-open a TCP/UDP socket without it, so *no code path in this APK can reach a
-network endpoint*.
+**FACT — permission.** No `android.permission.INTERNET`. On Android that
+permission is what gates the socket syscalls, so the app holds no direct
+capability to open a TCP or UDP connection.
 
 **FACT — no HTTP stack in the DEX.** A class-presence scan over all ten DEX
 files (apktool smali) found zero classes for:
@@ -136,13 +136,23 @@ The single e-mail-shaped match, `q@R.pt`, is a false positive from binary data.
 
 **Conclusion — FACT.** There is **no** remote licence backend, **no** update
 service, **no** telemetry, **no** analytics, **no** crash reporting and **no**
-authentication of any kind. The application is fully offline by construction,
-not merely offline by configuration.
+authentication of any kind.
+
+**Scope of that conclusion — stated precisely.** The finding is *no direct
+Android Internet capability, and no embedded remote backend*. Three channels
+have **not** been excluded and are not claimed to be: Binder, intent and
+broadcast IPC to a cooperating process; a local content provider or
+`LocalSocket` exposed by another installed app; and USB itself. The last is
+live — the app declares `android.hardware.usb.host` and registers
+`USB_DEVICE_ATTACHED`, so USB bulk/serial traffic is a genuine egress path from
+the device. What that traffic reaches is a DJI controller or flight controller,
+not a remote server, so it does not create a phone-home channel; but it does
+mean "no data leaves the device" would be an overclaim, and it is not made.
 
 **INFERENCE.** Any claim that this build "works without a licence" is trivially
 true and uninteresting: there is nothing to check a licence against. Whatever
-the author's intent, this artefact enforces nothing remotely because it cannot
-transmit anything at all.
+the author's intent, this artefact enforces nothing remotely, because it holds
+no socket capability and carries no remote backend to talk to.
 
 ---
 

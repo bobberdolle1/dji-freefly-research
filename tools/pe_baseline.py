@@ -396,7 +396,8 @@ class PE:
             return self.d[p + 2:p + 2 + 2 * ln].decode("utf-16le", "replace")
 
         def walk(off, path):
-            _ch, _ts, named, ids = struct.unpack_from("<IIHH", self.d, off)
+            _ch, _ts, _mj, _mn, named, ids = struct.unpack_from(
+                "<IIHHHH", self.d, off)
             for i in range(named + ids):
                 nm, dv = struct.unpack_from("<II", self.d, off + 16 + 8 * i)
                 label = name_at(nm) if nm >> 31 else str(nm & 0x7FFFFFFF)
@@ -466,7 +467,7 @@ class PE:
         for i in range(size // 28):
             o = base + i * 28
             chars, ts, maj, mn, typ, sod, addr, ptr = struct.unpack_from(
-                "<IIIIIIII", self.d, o)
+                "<IIHHIIII", self.d, o)
             e = dict(characteristics="0x%08X" % chars, timestamp=ts,
                      major_version=maj, minor_version=mn,
                      type=DEBUG_TYPE.get(typ, "UNKNOWN(%d)" % typ), type_id=typ,
@@ -805,14 +806,36 @@ def analyse(path, want_strings, max_strings):
         tb = data[text_sec["raw_pointer"]:text_sec["raw_pointer"] + text_sec["raw_size"]]
         int3 = tb.count(b"\xCC")
         rdtsc = sum(1 for i in range(len(tb) - 1) if tb[i] == 0x0F and tb[i + 1] == 0x31)
-    text_all = "\n".join(s for _, _, s in strings)
-    anti = [dict(indicator=n, present=bool([1 for _, _, s in strings if s == n]),
-                 offsets=[hex(i) for _, i, s in strings if s == n][:20])
+    # Endpoint / indicator scanning runs over the *whole* file in both ASCII and
+    # UTF-16LE views; `strings` is only a capped sample for the report body.
+    latin = data.decode("latin-1")
+    wide = data.decode("utf-16le", errors="ignore") if want_strings else ""
+
+    def raw_find(needle, regex=False, ignore_case=False):
+        """Return the file offsets of `needle` in both encodings."""
+        hits = set()
+        flags = re.IGNORECASE if ignore_case else 0
+        for text, scale in ((latin, 1), (wide, 2)):
+            if not text:
+                continue
+            if regex:
+                for m in re.finditer(needle, text, flags):
+                    hits.add(m.start() * scale)
+            else:
+                start = 0
+                while True:
+                    i = text.find(needle, start)
+                    if i < 0:
+                        break
+                    hits.add(i * scale)
+                    start = i + 1
+        return sorted(hits)
+
+    anti = [dict(indicator=n, present=bool(raw_find(n)), offsets=[hex(i) for i in raw_find(n)[:20]])
             for n in ANTI_DEBUG_NAMES]
     anti += [dict(indicator="VM string '%s'" % v,
-                  present=bool([1 for _, _, s in strings if v.lower() in s.lower()]),
-                  offsets=[hex(i) for _, i, s in strings
-                           if v.lower() in s.lower()][:10])
+                  present=bool(raw_find(v, ignore_case=True)),
+                  offsets=[hex(i) for i in raw_find(v, ignore_case=True)[:10]])
              for v in ANTI_VM_STRINGS]
     anti.append(dict(indicator="int3 (0xCC) bytes in .text", present=int3 > 0, value=int3))
     anti.append(dict(indicator="RDTSC (0F 31) opcodes in .text", present=rdtsc > 0,
@@ -823,21 +846,33 @@ def analyse(path, want_strings, max_strings):
              "background noise unless a specific indicator is present.")
 
     if want_strings:
-        urls = sorted({m.group().rstrip(".,);'\"") for m in URL_RE.finditer(text_all)})
-        hosts = sorted(set(HOST_RE.findall(text_all)))
+        def collect(rx, strip=""):
+            found = set()
+            for m in rx.finditer(latin):
+                found.add(m.group().rstrip(strip))
+            for m in rx.finditer(wide):
+                found.add(m.group().rstrip(strip))
+            return sorted(found)
+
+        urls = sorted({u for u in collect(URL_RE, ".,);'\"") if len(u) > 9})
         endpoints = [dict(url=u, category=classify_endpoint(u)) for u in urls]
+        latin_low = latin.lower()
         keywords = {}
         for word in KEYWORD_HITS:
-            hits = [hex(i) for _, i, s in strings if word.lower() in s.lower()]
-            if hits:
-                keywords[word] = dict(count=len(hits), first_offsets=hits[:20])
+            count = latin_low.count(word.lower())
+            if count:
+                hits = [hex(i) for i in raw_find(word, ignore_case=True)][:20]
+                keywords[word] = dict(count=count, first_offsets=hits)
+        total = (sum(1 for _ in re.finditer(rb"[\x20-\x7e]{5,}", data))
+                 + sum(1 for _ in re.finditer(rb"(?:[\x20-\x7e]\x00){5,}", data)))
         rep["strings"] = dict(
-            total=len(strings),
+            total=total,
+            sampled=len(strings),
             urls=endpoints,
             endpoint_classification={e["url"]: e["category"] for e in endpoints},
-            hosts=hosts,
-            emails=sorted(set(EMAIL_RE.findall(text_all))),
-            ipv4=sorted(set(IPV4_RE.findall(text_all))),
+            hosts=collect(HOST_RE),
+            emails=collect(EMAIL_RE),
+            ipv4=collect(IPV4_RE),
             keyword_hits=keywords,
             sample=[dict(kind=k, offset=hex(i), text=s[:160])
                     for k, i, s in strings[:200]])

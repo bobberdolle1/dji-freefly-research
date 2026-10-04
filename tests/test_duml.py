@@ -83,6 +83,38 @@ def test_crc_over_the_apk_first_frame_prefix_is_stable():
     assert crc16(b"", 0, 0) == 0x3692
 
 
+def test_crc16_step_is_the_standard_reflected_step():
+    """The APK's `t = crc>>8; crc = table[(byte^crc)&0xff] ^ t` is the ordinary
+    LSB-first CRC-16 update, merely reordered.
+
+    Worth pinning because the APK's spelling reads like a bespoke algorithm and
+    invites an implementer to "fix" it. What is DJI-specific is the initial
+    value and the absent final XOR, not the update.
+    """
+    import random
+
+    def apk_step(reg: int, byte: int) -> int:
+        t = (reg >> 8) & 0xFF
+        return (CRC16_TABLE[(byte ^ reg) & 0xFF] ^ t) & 0xFFFF
+
+    def standard_step(reg: int, byte: int) -> int:
+        return ((reg >> 8) ^ CRC16_TABLE[(reg ^ byte) & 0xFF]) & 0xFFFF
+
+    rng = random.Random(4242)
+    for _ in range(20000):
+        reg, byte = rng.randrange(65536), rng.randrange(256)
+        assert apk_step(reg, byte) == standard_step(reg, byte)
+
+
+def test_crc16_parameters_are_x25_with_a_dji_init():
+    """Poly 0x1021 reflected, init 0x3692, xorout 0 — X-25 otherwise."""
+    from flylib.crc import CRC16_INIT, CRC16_POLY, CRC16_XOROUT
+    assert CRC16_POLY == 0x8408      # reflection of 0x1021
+    assert CRC16_INIT == 0x3692
+    assert CRC16_XOROUT == 0x0000
+    assert crc16(b"123456789") == 0x7109
+
+
 # --------------------------------------------------------------------------
 # Parameter-name hashing
 # --------------------------------------------------------------------------
