@@ -354,7 +354,7 @@ the same typos would justify a HIGH claim. Stage 4/7 collects that evidence.
 |---|---|---|
 | SHA-256 matches baseline | **YES** | `sha256sum` |
 | `android.permission.INTERNET` | **NO** | manifest |
-| Remote licence backend | **NONE — impossible** | no INTERNET permission, no HTTP library in DEX, no endpoints |
+| Remote licence backend | **none found** | no INTERNET permission, no HTTP library in any of 10 DEX files, no vendor endpoint. A direct Internet capability is absent, so no such backend could be reached from this build; Binder/IPC and USB egress are not excluded |
 | App is debuggable | **YES** | `android:debuggable="true"` |
 | Signing certificate | Android debug keystore, self-signed | openssl on v2 block |
 | Signing scheme | v2 only, no v1 | `tools/signing.py` |

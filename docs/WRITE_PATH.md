@@ -125,10 +125,11 @@ one the public corpus calls "Write Param By Hash" — is **present but unreachab
 in Free Fly. Free Fly's only reachable parameter write is `cmdSet 3 / cmdId 0xE3`
 with a `(table, index, reserved, index, value)` payload.
 
-**INFERENCE.** Free Fly therefore cannot apply the hashed parameter writes that
-NLD's FCC sequence depends on, even though it contains the builder for them. That
-is a capability difference between the two tools, not an implementation
-difference.
+**INFERENCE.** In the analysed build, Free Fly cannot apply the hashed parameter
+writes that NLD's FCC sequence depends on, even though it contains the builder
+for them. That is a capability difference between the two tools, not an
+implementation difference — a statement about these two applications, not about
+what the flight controller or any other client could do.
 
 ## 6. Not established
 

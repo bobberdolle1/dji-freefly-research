@@ -93,8 +93,8 @@ non-flyable test airframe.
 |---|---|
 | Writing `ce_country_type` / `ce_regulatory_level` without written approval | regulatory parameter; possible geofencing/compliance effect |
 | Any `writeParamValue2015` (`0xF9`) | **unreachable in the app and deliberately so**; the guard in `flylib` blocks it |
-| The NLD/FreeFCC 21-frame FCC sequence | addressed at the **radio module** through the controller's TCP service; Free Fly has no transport that reaches it. Sending it over Free Fly's bulk endpoint is not merely unsupported — it is **unreachable** |
-| Service-mode entry (`0x10`/`0x58`) | Free Fly has no such command; introducing one is new capability work, not verification |
+| The NLD/FreeFCC 21-frame FCC sequence | These commands address the **radio module** through the controller's TCP service. **The current Free Fly implementation does not implement this sequence**, because it has neither the controller-side transport nor the radio/service-mode command path that the sequence uses. Replaying those frames over Free Fly's bulk endpoint is therefore not a supported operation, and this plan does not attempt it |
+| Service-mode entry (`0x10`/`0x58`) | Free Fly has no such command in the analysed build; adding one would be new capability work, not verification |
 | Any frame built from a decompiled `.pyd` | unverified constants |
 | Running this against a flight-ready airframe | — |
 

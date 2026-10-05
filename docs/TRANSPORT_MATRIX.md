@@ -90,8 +90,14 @@ DUML layer at all.
   why their DUML behaviour is not independently observable as app code: it lives
   in an 88 MB proprietary `.so`.
 
-**INFERENCE.** This is the mechanism-level reason Free Fly cannot use the FCC
-command sequence even if it wanted to: that sequence addresses the **radio
-module** through the controller's service, and Free Fly has no path to it. It
-reaches only the flight controller, over a bulk endpoint, with the 2017 parameter
-protocol.
+**INFERENCE.** This is the mechanism-level reason the two families are
+disjoint in practice. The FCC command sequence addresses the **radio module**
+through the controller's local service; the Free Fly implementation exposes
+neither that controller-side transport nor the radio/service-mode commands the
+sequence uses, and reaches the flight controller instead — over a bulk endpoint,
+with the 2017 parameter protocol.
+
+**Scope of that statement.** It describes what the analysed Free Fly build
+implements, not a property of DJI hardware. A different client with the
+controller-side transport, or a future Free Fly release adding it, could reach
+the radio module; nothing here says otherwise.
