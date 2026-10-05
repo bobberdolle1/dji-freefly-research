@@ -40,6 +40,7 @@ Seventeen documents. This page says what each is for and which to read first.
 
 | Document | Contents |
 |---|---|
+| [`REPRODUCING.md`](REPRODUCING.md) | How to re-derive the analysis yourself, and the expected sample hash |
 | [`HARDWARE_TEST_PLAN.md`](HARDWARE_TEST_PLAN.md) | Phased plan, risk levels, and what must not be attempted |
 | [`LICENSING.md`](LICENSING.md) | Provenance audit and why no licence was chosen |
 | [`STATUS.md`](STATUS.md) | Running status and the full sample register |

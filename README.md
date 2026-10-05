@@ -196,12 +196,16 @@ cat research/generated/command_corpus.json       # normalised FCC command corpus
 ```
 
 Re-deriving the analysis from your own legally obtained samples is optional and
-requires the toolchain:
+requires the toolchain. Full instructions, including the **expected SHA-256**
+you should check your copy against, are in
+[`docs/REPRODUCING.md`](docs/REPRODUCING.md). In short:
 
 ```bash
 bash tools/toolchain.sh                          # JDK, jadx, apktool into work/
-# then place your sample at samples/FF_v_1_00.apk and run tools/baseline.py,
-# tools/signing.py, tools/extract_duml_commands.py — see docs/README.md
+cp /path/to/your/copy.apk samples/FF_v_1_00.apk  # samples/ is gitignored
+sha256sum samples/FF_v_1_00.apk                   # must match docs/REPRODUCING.md
+python tools/baseline.py samples/FF_v_1_00.apk work/baseline
+python tools/signing.py  samples/FF_v_1_00.apk work/baseline
 ```
 
 `tools/toolchain.sh`, the decoded output and any placed sample all live under
