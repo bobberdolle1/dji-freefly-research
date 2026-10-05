@@ -1,5 +1,11 @@
 name: tests
 
+# NOTE: this workflow has never executed. The publishing account is locked for
+# a billing issue, so GitHub refuses to start jobs ("The job was not started
+# because your account is locked due to a billing issue") and every check fails
+# with zero steps executed. The workflow is syntactically valid and its
+# assertions were reproduced locally, but treat the first real run as
+# unverified.
 on:
   push:
     branches: [main]
@@ -37,6 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the size check resolves blobs through git history, so a
+          # shallow checkout would silently report every file as missing.
+          fetch-depth: 0
 
       - name: No proprietary binaries may be committed
         run: |
