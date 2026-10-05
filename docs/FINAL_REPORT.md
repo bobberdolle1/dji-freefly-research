@@ -240,3 +240,56 @@ error available here, and this project has tried not to commit it.
    `(tableNo, paramIndex)` is **unresolved**; the join has not been traced.
 5. The `force` flag's interaction with the empty-result test in
    `readAllParameters` is unresolved, and `flylib` deliberately encodes no guess.
+
+---
+
+## Addendum — lineage scores and the FCC corpus
+
+Written after the comparative passes closed. See `COMPARATIVE_REPORT.md`,
+`APP_LINEAGE.md` and `COMMAND_CORPUS.md`.
+
+```
+PROTOCOL_LINEAGE_CONFIDENCE     = HIGH
+DIRECT_CODE_LINEAGE_CONFIDENCE  = LOW
+DIRECT_CODE_COPY_EVIDENCE       = NONE
+SHARED_DATA_EVIDENCE            = HIGH
+```
+
+**FACT.** Drone-Hacks 1.48 and Free Fly 1.0 agree on **10 of 10 command ids** and
+**6 of 6 payload layouts**, on identical CRC seeds (`0x77`, `0x3692`), the same
+length mask and the same parameter-hash modulus. Drone-Hacks names the reserved
+2017 field `unknown1`; Free Fly writes a bare zero in the same position.
+
+**INFERENCE — and the check that matters.** `djiparam`, an independent public
+project, contains the same CRC seeds, the same command ids, the same hash
+modulus *and the literal term `unknown1`*. So every one of those markers is
+public protocol knowledge. It is **strong validation** that this project's reading
+of Free Fly's bytecode is correct — the constants were derived by brute-forcing
+the APK's CRC tables against every polynomial, and a third codebase corroborates
+them — and **LOW** evidence of code lineage. The description is *separately
+implemented codebases*, not "unrelated" and not "shared".
+
+**FACT — the one HIGH-tier result, and it is not about Free Fly.** NLD FCC,
+FreeFCC and FreeFCC-USB ship a **byte-identical 21-frame FCC profile**, with
+identical timing and a 4/4 identical keepalive between NLD and FreeFCC. That is
+shared *data*. DJI-FCC-Unlock-iOS is a 22-frame divergent fork. Free Fly contains
+no FCC sequence at all.
+
+**FACT.** Free Fly's write path is fully reachable — `EditParamDialog` →
+`setParameter` → `writeParameter` → `writeParamValue2017` — and 2017-only:
+`writeParameter` contains zero references to 2015. `cmdSet 3 / cmdId 0xF9`, the
+hashed write NLD's FCC sequence uses six times, is **present but unreachable** in
+Free Fly. That is a capability difference, not an implementation one.
+
+**INFERENCE.** The three mechanisms in this corpus are disjoint. DJIFCC and
+RedFly ship DJI's own package re-signed; NLD/FreeFCC reconfigure the **radio**
+through the controller's local TCP service; Free Fly and Drone-Hacks address the
+**flight controller's parameter table** over USB. Only the first two can reach
+the radio, and only the third reaches the FC directly.
+
+**FACT.** Free Fly has no network capability of any kind — no `INTERNET`
+permission, no HTTP library in ten DEX files, no endpoints. Drone-Hacks is
+licence-gated against `drone-hacks.com/api/v1` and DJI's account API, and caches
+an AES-CFB-encrypted compatibility map from `cloud.drone-hacks.com`. NLD bundles
+a runtime-reachable WireGuard. RedFly's artifacts sit behind a CSRF-gated,
+session-bound endpoint; none was acquired.
