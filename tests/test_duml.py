@@ -59,25 +59,45 @@ def _apk_array(label: str) -> list[int]:
     raise AssertionError(f"{label} not found in {SMALI}")
 
 
-@pytest.mark.skipif(not HAVE_SMALI, reason="apktool smali not available")
-def test_crc8_table_matches_the_apk():
-    assert list(CRC8_TABLE) == _apk_array("array_0")
+# The CRC lookup tables recovered from the analysed sample are committed as a
+# derived test vector, so the strongest verification in this project - that
+# flylib's polynomial-derived tables are byte-identical to the APK's - runs on a
+# clean clone with no proprietary artefact present.
+FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures",
+                       "crc_tables_from_sample.json")
 
 
-@pytest.mark.skipif(not HAVE_SMALI, reason="apktool smali not available")
-def test_crc16_table_matches_the_apk():
-    assert list(CRC16_TABLE) == _apk_array("array_1")
+def _reference_tables() -> dict:
+    import json
+    with open(FIXTURE, encoding="utf-8") as fh:
+        return json.load(fh)
 
 
-@pytest.mark.skipif(not HAVE_SMALI, reason="apktool smali not available")
-def test_crc_over_the_apk_first_frame_prefix_is_stable():
-    """Spot-check the routines against hand-applied CRC definitions.
+def test_crc8_table_matches_the_reference():
+    assert list(CRC8_TABLE) == _reference_tables()["crc8_table"]
 
-    crc8 is a plain reflected CRC-8 (poly 0x8C, init 0x77) so its value for a
-    one-byte message equals the table entry XORed with the init in the standard
-    way; asserting the fixed value pins the initial condition, which is the part
-    a polynomial alone does not determine.
-    """
+
+def test_crc16_table_matches_the_reference():
+    assert list(CRC16_TABLE) == _reference_tables()["crc16_table"]
+
+
+def test_reference_fixture_carries_the_recovered_parameters():
+    d = _reference_tables()
+    assert d["crc8_poly"] == "0x8C" and d["crc8_init"] == "0x77"
+    assert d["crc16_poly_reflected"] == "0x8408"
+    assert d["crc16_init"] == "0x3692" and d["crc16_xorout"] == "0x0000"
+
+
+@pytest.mark.skipif(not HAVE_SMALI, reason="decoded smali not present locally")
+def test_reference_fixture_agrees_with_local_smali():
+    """Stronger local check: re-derive the fixture from the APK's own bytecode."""
+    d = _reference_tables()
+    assert _apk_array("array_0") == d["crc8_table"]
+    assert _apk_array("array_1") == d["crc16_table"]
+
+
+def test_crc_initial_conditions_are_pinned():
+    """The init is the part a polynomial alone does not determine."""
     assert crc8(b"", 0, 0) == 0x77
     assert crc8(b"\x00") == CRC8_TABLE[0x00 ^ 0x77]
     assert crc16(b"", 0, 0) == 0x3692
