@@ -142,12 +142,19 @@ reserved field, independently observed in both projects**.
 
 ### 3.3 The parameter type table differs
 
-**FACT.** `DUMLPayload_FlyController_ParamType` carries constants `[0..7]` —
-**eight** types. Free Fly's `ParamType` has **ten** (`UINT8`…`DOUBLE`, ids 0–9).
+**FACT.** `DUMLPayload_FlyController_ParamType` carries constants `0x0` through
+`0xb` — **twelve** entries — with ctype member names beginning `ubyte, ushort,
+ulong, ulonglong, byte, …`. Free Fly's `ParamType` has **ten** (`UINT8`…
+`DOUBLE`, ids 0–9).
 
-**INFERENCE.** Drone-Hacks' enum appears truncated relative to Free Fly's, or
-Free Fly added `FLOAT`/`DOUBLE` handling Drone-Hacks lacks. The numeric values
-that overlap are identical. **This is a genuine difference, not an error.**
+**CORRECTION.** This section previously said Drone-Hacks has *eight* types.
+That was my error: the constant list had been truncated to its first eight
+entries when I dumped it, and I wrote the truncated list as a finding.
+
+**INFERENCE.** The two type tables are of **different width** — 12 against 10 —
+and overlap over the ids they share. Whether Drone-Hacks' is a superset, or the
+two diverge in the middle, is not established from the truncated member-name
+list. The difference is real; its shape is unknown.
 
 ### 3.4 The framer is more robust
 
@@ -201,24 +208,32 @@ name-for-name — including `exportParameters` / `importParameters` /
 
 ## 5. What this establishes
 
-**INFERENCE, MEDIUM tier.** Drone-Hacks 1.48 and Free Fly 1.0 implement the same
-DUML protocol with the same header layout, the same command set, the same
-registration handshake, the same parameter-name hash, the same 2017 payload
-shape *including the undocumented reserved field*, and the same
-tolerant reply-matching policy.
+**Drone-Hacks 1.48 and Free Fly 1.0 are separately implemented codebases that
+converge on DJI's protocol.** Since `docs/WIRE_COMPARISON.md` was written the
+evidence is considerably stronger than "both use DUML": **10 of 10 command ids
+and 6 of 6 payload layouts are identical**, including the undocumented reserved
+field that Drone-Hacks names `unknown1` and Free Fly writes as a bare zero.
 
-That is far above the "both use DUML" tier. It is consistent with both being
-implementations of DJI's protocol using the same public reverse-engineering
-literature — which the mission's provenance scale treats as **convergence on a
-third party's format**, not as copying.
+Two things follow, and they must not be collapsed into one score:
 
-**It is not HIGH tier.** There is no evidence of shared code: the languages
-differ (Cython/Python vs Kotlin), the naming conventions differ
-(`Rq`/`Re` suffixes vs `get…`/`read…`), and no identical constant table, bug, or
-typo has been shown.
+1. **Strong validation of the Free Fly protocol recovery.** Two implementations
+   written in different languages, against different hardware, landing on the
+   same command ids, the same reserved field and the same CRC/hash constants is
+   powerful corroboration that this project's reading of Free Fly's bytecode is
+   correct rather than a plausible misreading.
+2. **LOW evidence for direct code lineage.** Every one of those facts is what
+   two independent implementations of a *third party's* format must produce.
+   Shared protocol knowledge is not shared source. The languages differ
+   (Cython/Python vs Kotlin), the naming conventions differ (`Rq`/`Re` vs
+   `get…`/`read…`), the platforms differ, and no identical constant *table*,
+   bug, or typo has been shown.
+
+The word to avoid is "unrelated", which would assert an independence this
+evidence does not establish, and "shared", which would assert a lineage it does
+not support. Formal scoring is in `docs/APP_LINEAGE.md`.
+
 
 **Differences that keep this from being "the same code twice":**
-
 | | Drone-Hacks 1.48 | Free Fly 1.0 |
 |---|---|---|
 | Platform | Tkinter desktop, pyserial | Android, raw USB bulk |
@@ -227,7 +242,7 @@ typo has been shown.
 | Encryption | full family implemented | declared, never used |
 | Hardware register writes | yes | no |
 | Gimbal calibration | yes | no |
-| Type table | 8 types | 10 types |
+| Type table | 12 entries (`0x0`–`0xB`) | 10 entries (`0x0`–`0x9`) |
 | Licensing | `cert_view`, `dji_login` | **none** |
 
 ## 6. Not done

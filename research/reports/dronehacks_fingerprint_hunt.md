@@ -35,10 +35,27 @@ bundle. No `.pyd` was decompiled and no claim here depends on one.
 | length mask | `0x3FF` | `1023` ✓ |
 | param hash modulus | `0xFFFFFFFB` (2³²−5) | `0xFFFFFFFB` ✓ |
 
-**INFERENCE.** These are DJI's protocol constants, and they are identical in both
-projects. This is independent confirmation of the `flylib.crc` derivation, which
-was obtained by brute-forcing the APK's own CRC tables against every polynomial
-— two unrelated codebases now agree on the values.
+**These are DJI's protocol constants, and both projects agree on every one of
+them.** That cuts two ways, and the two must not be collapsed:
+
+1. **Strong validation of the Free Fly protocol recovery.** The `flylib.crc`
+   derivation was obtained by brute-forcing the APK's own CRC tables against
+   every polynomial. A codebase in a different language, written years apart
+   against different hardware, independently lands on the same CRC-8 seed, the
+   same CRC-16 initial value, the same length mask and the same parameter-hash
+   modulus. The Free Fly constants are therefore very unlikely to be a
+   misreading of the bytecode.
+2. **LOW evidence for direct code lineage.** Identical protocol constants are
+   what *both* independent implementations of a third-party format must
+   produce. They demonstrate shared *protocol knowledge*, not shared source.
+   The scale this project uses ranks identical constant **tables** as HIGH, but
+   these are four scalar values that are fully determined by the wire format.
+
+The honest description is therefore **separately implemented codebases** that
+converge on the same protocol constants — not "unrelated" codebases, since that
+would assert independence this evidence does not establish, and not "shared"
+codebases either. The direct-lineage question is scored separately in
+`docs/APP_LINEAGE.md`.
 
 **One divergence, and it matters for reproduction.** Drone-Hacks encodes the
 parameter name with **`'gbk'`**; Free Fly uses **US-ASCII**. For ASCII
