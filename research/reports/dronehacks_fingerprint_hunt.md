@@ -200,3 +200,51 @@ nothing to compare, because neither bundles DJI's parameter names. Free Fly's
 - Whether `/license/update-short-sn-to-long-sn` is called at unlock time or only
   during registration.
 - Any request to either backend.
+
+## 7. Cache and export paths
+
+This supersedes an earlier task that asked for a structural comparison of
+`assets/advanced.json` against Free Fly's catalogue. That comparison was
+withdrawn once `advanced.json` was identified as a quiz payload; the useful
+question is what Drone-Hacks persists at runtime instead.
+
+**FACT — a persisted, encrypted compatibility map, fetched from the vendor.**
+`CompatibilityController.__init__` holds
+`https://cloud.drone-hacks.com/drone-hacks/compatibility.json` and
+`.../compatibility_beta.json`, plus state named `dronehacksFolder`, `localJson`
+and `fallBackJson`, with a `/.tmp` path fragment. `parse_and_save_json` opens
+`localJson` in mode `w+` and writes `json.dumps(self.compatibilityMap)` after
+`encrypt`.
+
+**FACT — the local cache is AES-CFB encrypted.** `encrypt` / `decrypt` use
+`AES.new(KEY, MODE_CFB, IV)` with `base64` and `utf-8`, both referencing
+module-level `KEY` and `IV`.
+
+**FACT — three-tier load with an offline fallback.** `load_json` calls
+`get_compatibility_server` → `get_compatibility_local` →
+`get_compatibility_failsafe`, reporting:
+
+> "Map successfully received."
+> "Software seems to be offline, using local copy of map to allow basic functions only."
+> "Software is in FailSafe mode, using release map to allow basic functions only."
+
+**FACT — parameter export exists, as JSON, on demand.**
+`DroneParameters.export_parameters()` is `json.dumps(self.parameters)`; it
+returns a string and the caller chooses the path. The UI binds "Export
+parameters" to `export_button`, and `view_controller` references `expanduser`.
+
+**FACT — parameter import is a write-back, not a dry read.**
+`import_parameters(parameters)` splits the input, calls `set_parameter` per entry,
+then `write_parameter_to_drone`.
+
+**Conclusion.** What Drone-Hacks persists is a **model/region compatibility
+map**, encrypted at rest with an embedded key, refreshable from the vendor and
+usable offline from a local copy. It is **not** a parameter table. There is no
+cached DJI parameter catalogue: the table is rediscovered from the aircraft each
+session and exported on demand. The catalogue-overlap question has no second
+operand, and Free Fly's 855-entry `assets/params_catalog.json` remains unique to
+Free Fly.
+
+**Not recovered:** the literal values of `KEY`, `IV` and the `localJson` path —
+they are assigned at runtime rather than appearing as class-body constants. No
+attempt was made to decrypt or read any cached file.
