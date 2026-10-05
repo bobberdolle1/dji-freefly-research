@@ -241,6 +241,8 @@ implementation of the 2015/2017 protocols.
 - No decompilation of app logic; the profile JSONs were read directly.
 - `libnld-core.so` and `libwg*.so` not analysed.
 - The `0x504B4453` (`PKDS`) signing block not decoded.
-- Whether the WireGuard configuration is active, and what it tunnels to, is
-  unknown: it is a capability present in the binary, with no evidence here that
-  it is switched on.
+- ~~Whether the WireGuard configuration is active.~~ **RESOLVED** in
+  `nld_native_transport.md`: `com.wireguard.android.backend.GoBackend` is
+  present in the DEX, so WireGuard is runtime-reachable. (My first check grepped
+  for `com.wireguard` with a dot and found nothing; DEX type descriptors use
+  `/`.) What it tunnels **to** remains unknown.
