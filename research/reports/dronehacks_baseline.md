@@ -74,13 +74,19 @@ core/drone_parameters.py      parameter model, export/import, defaults
 core/core.py
 controller/{main,api,drone,settings,tools,view,compatibility}_controller.py
 view/{view,wizard,cert_view,dji_login}.py
-assets/advanced.json          bundled parameter/config data
+assets/advanced.json          human-verification quiz payload (NOT a parameter DB)
 assets/lang/{de_DE,en_US}.json
 ```
 
 **INFERENCE.** `cert_view` and `dji_login` indicate **licence/login
 functionality**, which Free Fly has none of. `compatibility_controller`
 suggests model/region compatibility handling.
+
+**CORRECTED.** `advanced.json` was first described here as bundled
+parameter/config data. It is not: it is a quiz payload used as a
+proof-of-human check. See `dronehacks_fingerprint_hunt.md`, which also finds
+**no** DJI parameter names anywhere in the bytecode — Drone-Hacks discovers the
+parameter table from the aircraft and bundles no catalogue.
 
 ## 3. The DUML implementation — and the convergence with Free Fly
 
@@ -232,9 +238,14 @@ typo has been shown.
   they are class-body attributes, not literals in the function code objects
   dumped so far. That is the next concrete step and it would allow a true
   byte-level frame comparison with Free Fly's table.
-- `assets/advanced.json` was extracted but not parsed — it is Drone-Hacks'
-  bundled parameter/config database and is the obvious thing to compare against
-  Free Fly's `params_catalog.json`.
-- `core/dji.py`, `controller/api_controller.py` and `view/dji_login.py` not
-  read; the last is where any licence backend would be named.
+- ~~`assets/advanced.json` ... compare against Free Fly's catalogue.~~
+  **RETRACTED** in `dronehacks_fingerprint_hunt.md`: it is a human-verification
+  quiz payload (986 B, `{"quiz": {...}}` with deliberate misspellings), not a
+  parameter database. A token scan also found **no** DJI parameter names
+  anywhere in the bytecode, so Drone-Hacks ships no catalogue at all and
+  discovers the table from the aircraft at runtime. There is no
+  catalogue-overlap question to answer.
+- `core/dji.py`, `controller/api_controller.py` and `view/dji_login.py` have
+  since been read: `api_controller` and the two login views contain the full
+  licence/backend subsystem, documented in `dronehacks_fingerprint_hunt.md`.
 - No Authenticode signature analysis of the EXE beyond the PyInstaller payload.
