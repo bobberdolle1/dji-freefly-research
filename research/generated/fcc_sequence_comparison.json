@@ -1,0 +1,177 @@
+{
+  "schema": "freefly-fcc-sequence-comparison/1",
+  "normalisation": {
+    "excluded": [
+      "sequence number",
+      "CRC (computed at send time)"
+    ],
+    "compared": [
+      "cmdSet",
+      "cmdId",
+      "payload hex"
+    ],
+    "identity": "ordered triple (cmdSet, cmdId, payload)"
+  },
+  "frame_counts": {
+    "nld-fcc": 21,
+    "FreeFCC": 21,
+    "FreeFCC-USB": 21,
+    "DJI-FCC-Unlock-iOS": 22
+  },
+  "pairwise_identical_frames": {
+    "nld-fcc vs FreeFCC": {
+      "len_a": 21,
+      "len_b": 21,
+      "identical": 21,
+      "compared": 21,
+      "identical_fraction": 1.0
+    },
+    "nld-fcc vs FreeFCC-USB": {
+      "len_a": 21,
+      "len_b": 21,
+      "identical": 21,
+      "compared": 21,
+      "identical_fraction": 1.0
+    },
+    "nld-fcc vs DJI-FCC-Unlock-iOS": {
+      "len_a": 21,
+      "len_b": 22,
+      "identical": 3,
+      "compared": 21,
+      "identical_fraction": 0.1429
+    },
+    "FreeFCC vs FreeFCC-USB": {
+      "len_a": 21,
+      "len_b": 21,
+      "identical": 21,
+      "compared": 21,
+      "identical_fraction": 1.0
+    },
+    "FreeFCC vs DJI-FCC-Unlock-iOS": {
+      "len_a": 21,
+      "len_b": 22,
+      "identical": 3,
+      "compared": 21,
+      "identical_fraction": 0.1429
+    },
+    "FreeFCC-USB vs DJI-FCC-Unlock-iOS": {
+      "len_a": 21,
+      "len_b": 22,
+      "identical": 3,
+      "compared": 21,
+      "identical_fraction": 0.1429
+    },
+    "keepalive nld-fcc vs FreeFCC": {
+      "len_a": 4,
+      "len_b": 4,
+      "identical": 4,
+      "compared": 4,
+      "identical_fraction": 1.0
+    }
+  },
+  "ios_divergence": [
+    {
+      "pos": 3,
+      "ios": "03/f9 9ad152ae01",
+      "freEFCC": "00/00 000001"
+    },
+    {
+      "pos": 4,
+      "ios": "00/00 000001",
+      "freEFCC": "00/32 3131000000"
+    },
+    {
+      "pos": 5,
+      "ios": "00/32 3131000000",
+      "freEFCC": "03/af 032400000000000000"
+    },
+    {
+      "pos": 6,
+      "ios": "03/af 032400000000000000",
+      "freEFCC": "07/30 41550000415500000100"
+    },
+    {
+      "pos": 7,
+      "ios": "07/30 55530000555300000100",
+      "freEFCC": "07/30 41550000415500000100"
+    },
+    {
+      "pos": 8,
+      "ios": "07/30 55530000555300000100",
+      "freEFCC": "09/27 00024800ffff0200000000"
+    },
+    {
+      "pos": 9,
+      "ios": "09/27 00024800ffff0200000000",
+      "freEFCC": "09/27 00026300ffff0300000000"
+    },
+    {
+      "pos": 10,
+      "ios": "09/27 00026300ffff0300000000",
+      "freEFCC": "07/18 ff415500"
+    },
+    {
+      "pos": 11,
+      "ios": "07/18 ff555300",
+      "freEFCC": "07/19 c0"
+    },
+    {
+      "pos": 12,
+      "ios": "07/19 c0",
+      "freEFCC": "03/f9 d04aeffb01"
+    },
+    {
+      "pos": 13,
+      "ios": "03/f9 d04aeffb01",
+      "freEFCC": "03/f9 d04aeffb00"
+    },
+    {
+      "pos": 14,
+      "ios": "03/f9 d04aeffb00",
+      "freEFCC": "00/e5 323201"
+    },
+    {
+      "pos": 15,
+      "ios": "00/e5 323201",
+      "freEFCC": "03/f9 236b820101"
+    },
+    {
+      "pos": 16,
+      "ios": "03/f9 236b820101",
+      "freEFCC": "03/f9 8773e68a01"
+    },
+    {
+      "pos": 17,
+      "ios": "03/f9 8773e68a01",
+      "freEFCC": "06/8c 000300"
+    },
+    {
+      "pos": 18,
+      "ios": "06/8c 000300",
+      "freEFCC": "06/8c 000100"
+    },
+    {
+      "pos": 19,
+      "ios": "06/8c 000100",
+      "freEFCC": "06/72 000000000001ff"
+    },
+    {
+      "pos": 20,
+      "ios": "06/72 000000000001ff",
+      "freEFCC": "10/58 030100"
+    },
+    {
+      "pos": 21,
+      "ios": "10/58 030100",
+      "freEFCC": null
+    }
+  ],
+  "transports": {
+    "nld-fcc": "tcp 40009 (fcc/keepalive), tcp 40007 (led) \u2014 native impl",
+    "FreeFCC": "unknown from assets; profile format identical to nld-fcc",
+    "FreeFCC-USB": "USB host",
+    "DJI-FCC-Unlock-iOS": "MFi ExternalAccessory",
+    "DJI-FCC-HACK": "USB CDC-ACM serial, vid 11427 (0x2CA3) pid 4128 (0x1020), via usb-serial-for-android",
+    "Free Fly": "raw USB bulk, vid 0x2CA3, pids 0x10/0x18/0x20 \u2014 no CDC-ACM"
+  }
+}
