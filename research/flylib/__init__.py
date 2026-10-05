@@ -14,10 +14,23 @@ Read-only by default::
     session = Session(ReplayTransport.from_hexfile("capture.hex"))
     info = session.query_device_info()      # sends reads only
 
-To emit frames without a device::
+To render frames without a device::
 
     dry = DryRunTransport()
     dry.send(commands.version_inquiry(next_seq()))
+
+The read path
+-------------
+The end-to-end read path is ``device -> protocol selection -> parameter
+enumeration -> snapshot JSON``:
+
+* :mod:`flylib.crc`, :mod:`flylib.packet` — DUML wire format and checksums
+* :mod:`flylib.parser` — streaming framer with resynchronisation
+* :mod:`flylib.commands` — one builder per recovered DroneCommands method
+* :mod:`flylib.transport` — abstract, replay, scripted, dry-run and live transports
+* :mod:`flylib.selection` — 2015/2017 protocol selection policy
+* :mod:`flylib.params` — FC parameter type table and value codecs
+* :mod:`flylib.snapshot` — capture, export to JSON, import, and compare
 
 Layout
 ------
@@ -28,6 +41,8 @@ Layout
 ``transport`` abstract, replay and dry-run transports
 ``session``   request/response matching over a transport
 ``params``    parameter-name hashing and value codecs
+``selection`` protocol-selection policy
+``snapshot``  parameter snapshot serialisation
 ``guard``     the mutation gate, disabled by default
 """
 from .crc import crc8, crc16
@@ -38,9 +53,14 @@ from .packet import (ACK_AFTER_EXEC, ACK_BEFORE_EXEC, ACK_NO_ACK, CMD_SET_COMMON
                      unpack_dev_byte)
 from .parser import StreamParser
 from .commands import SequenceCounter, param_hash
+from .params import ParamType, decode_value, encode_value
+from .selection import IndexMapStore, select_parameters
+from .snapshot import Snapshot, SnapshotError, SnapshotParameter, build_snapshot
 from .guard import MutationGuard, MutationNotAllowed, is_state_changing
 from .transport import (DryRunTransport, LiveTransport, ReplayTransport,
                         ScriptedTransport, Session, Transport)
+
+next_seq = SequenceCounter()
 
 __all__ = [
     "crc8", "crc16", "MAGIC", "HEADER_SIZE", "MIN_FRAME_SIZE", "Packet",
@@ -48,8 +68,10 @@ __all__ = [
     "unpack_dev_byte", "DEV_PC", "DEV_FC", "DEV_CENTER", "CMD_SET_COMMON",
     "CMD_SET_FC", "PKT_REQUEST", "PKT_RESPONSE", "ACK_NO_ACK",
     "ACK_BEFORE_EXEC", "ACK_AFTER_EXEC", "StreamParser", "SequenceCounter",
-    "param_hash", "MutationGuard", "MutationNotAllowed", "is_state_changing",
-    "Transport", "ReplayTransport", "ScriptedTransport", "DryRunTransport",
-    "LiveTransport", "Session",
+    "next_seq", "param_hash", "ParamType", "decode_value", "encode_value",
+    "select_parameters", "IndexMapStore", "Snapshot", "SnapshotError",
+    "SnapshotParameter", "build_snapshot", "MutationGuard", "MutationNotAllowed",
+    "is_state_changing", "Transport", "ReplayTransport", "ScriptedTransport",
+    "DryRunTransport", "LiveTransport", "Session",
 ]
-__version__ = "0.2.0"
+__version__ = "0.3.0"
