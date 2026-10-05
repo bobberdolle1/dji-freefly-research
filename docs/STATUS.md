@@ -36,7 +36,7 @@ them.
 |---|---|---|---|
 | C1 | NLD FCC APK baseline | ✅ **done** | Bounded fingerprinting pass. `research/reports/nldfcc_baseline.md` — identity, signing (incl. an unknown `PKDS` block), TCP transport, and the app's own annotated 21-frame FCC sequence |
 | C2 | Drone-Hacks 1.48 EXE baseline | ✅ **done** | PyInstaller onefile / CPython 3.11 / **Cython-compiled** (corrected — see report). Tkinter desktop + pyserial. `research/reports/dronehacks_baseline.md`. `tools/pyi_extract.py` added |
-| C3 | Public open-source corpus | ⚠️ partial | five repos cloned and pinned; report never written. Findings corroborate the DUML work (see below) |
+| C3 | Public open-source corpus | ✅ pinned, ✅ **used as control** | 6 repos pinned. Served as the control group for the lineage assessment: `djiparam/Duml.java` contains crc8 init 0x77, crc16 init 0x3692 and the literal `unknown1`, which demotes every 'sharpest' marker to public protocol knowledge. `docs/APP_LINEAGE.md` |
 | C4 | redfly.app / djifcc.app | ✅ **recovered** | 18 APKs acquired and registered, including **stock DJI Fly** baselines. Differential written up in `research/reports/djifcc_differential.md`. redfly.app still outstanding |
 | C5 | Normalized command database | ⬜ | |
 | C6 | Transport matrix | ⬜ | |
