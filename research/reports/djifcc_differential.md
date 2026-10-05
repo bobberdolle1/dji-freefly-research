@@ -61,9 +61,17 @@ is the next step and is not attempted here.
 | Artifact | Scheme(s) | Subject | Cert SHA-256 |
 |---|---|---|---|
 | Stock DJI Fly 1.21.8 | v2 | `CN=dji` | `01a42c94aa87020f41e8c252598df98b…` |
-| DJIFCC Fly Android | v2 **and v3** | `CN=DJIFCC.APP, OU=DJIFCC.APP, O=DJIFCC.APP, L=PL, ST=PL, C=PL` | `cad73496edd54f0453708617454f494b…` |
-| DJIFCC Fly RC2 | v2 **and v3** | same | `cad73496edd54f0453708617454f494b…` |
-| DJIFCC GO 4 | v2 **and v3** | same | `cad73496edd54f0453708617454f494b…` |
+| DJIFCC Fly Android | v1 + v2 + v3 | `CN=DJIFCC.APP, OU=DJIFCC.APP, O=DJIFCC.APP, L=PL, ST=PL, C=PL` | `cad73496edd54f0453708617454f494b…` |
+| DJIFCC Fly RC2 | v1 + v2 + v3 | same | `cad73496edd54f0453708617454f494b…` |
+| DJIFCC GO 4 | v1 + v2 + v3 | same | `cad73496edd54f0453708617454f494b…` |
+
+**FACT.** Every patched build also carries a **v1/JAR signature** that the
+earlier draft of this report omitted: `META-INF/KEY0.SF` and
+`META-INF/KEY0.RSA`. Stock DJI Fly has none. All four patched builds use
+certificate serial `01`, valid 2026-05-25 → 2051-05-19, and the same
+`cad73496…` key. So the re-signing covers v1, v2 and v3 — the toolchain signs
+for every scheme the platform may consult, which is what `apksigner` does by
+default with `--v1-signing-enabled --v2-signing-enabled --v3-signing-enabled`.
 
 Two consequences follow directly:
 
@@ -156,15 +164,57 @@ from 112 (armeabi-v7a only) to 206 (arm64-v8a). The DEX delta is the cleanest
 available signal for locating the patch, but it is confounded by the version
 gap and by the ABI change.
 
-**FACT — packaging lineage.** `DJIFCC.APP-Android-arm64-signed-1.21.12.19.apk`
-and `DJIFCC.APP-RCPro2-signed-1.21.12.3.apk` are **byte-length identical**
-(716,586,363) with **different SHA-256** (`d65c3608…` vs `d5a76d3b…`) and the
-same DEX count (23).
+**FACT.** `DJIFCC.APP-Android-arm64-signed-1.21.12.19.apk` (`dji.go.v5`,
+versionCode 3131451) and `DJIFCC.APP-RCPro2-signed-1.21.12.3.apk` (`dji.go.v6`,
+same versionCode 3131451) are both `versionName` 1.21.12 — the same upstream DJI
+release, repackaged for two package targets.
 
-**INFERENCE.** Equal length with differing content and an equal DEX count is
-the signature of **one APK repackaged per target SKU**, not two independent
-builds. Phone and RC Pro 2 likely share a single patched payload differing only
-in SKU-identifying content.
+**FACT — the repackaging hypothesis is now proven, not inferred.**
+`tools/repack_proof.py` compares normalised, order-independent entry content
+(compression method, timestamps and ZIP ordering ignored) between the Android
+and RC Pro 2 builds:
+
+| Check | Result |
+|---|---|
+| Archive size | identical — 716,586,363 bytes |
+| ZIP entries | **16,180 each, name sets identical** (0 unique to either side) |
+| Entries with differing content | **6** |
+| …of which signature/manifest | 4 (`META-INF/*`, `AndroidManifest.xml`) |
+| …of which payload | **2** |
+| Byte-identical archives | no |
+
+**FACT.** Both payload differences are *size-preserving substitutions*:
+
+- **`resources.arsc`** (21,699,132 bytes) differs in **exactly one byte**:
+  `0x35` → `0x36`, i.e. `'5'` → `'6'` — the `dji.go.v5` → `dji.go.v6`
+  package name.
+- **`classes23.dex`** (305,256 bytes) differs in **82,454 of 305,256 bytes**
+  (27 %), with the byte substitutions showing no positional pattern.
+
+**FACT.** Every other entry — the other 21 DEX files, all 206 native
+libraries, all resources — is **byte-identical** between the two builds.
+
+**Conclusion — FACT.** These are **one APK repackaged per target SKU**, not two
+independent builds. The package name is carried in `resources.arsc`; the only
+substantive per-SKU difference is `classes23.dex`.
+
+**INFERENCE.** `classes23.dex` is therefore the most likely carrier of the
+per-SKU patch content. Supporting circumstantial evidence: stock DJI Fly 1.21.8
+has **22** DEX files and the patched builds have **23**, and `classes23.dex`
+is the only entry that changes between SKUs. It is **not** proven — a
+version-matched stock build is required to show that `classes23.dex` has no
+stock counterpart at all.
+
+**FACT — the multidex layout itself was rewritten by the packager**, which is
+why a naive index-by-index DEX diff against stock is meaningless:
+
+| | `classes.dex` | DEX count |
+|---|---|---|
+| Stock 1.21.8 | 17,524 bytes (a stub) | 22 |
+| Patched 1.21.12.19 | 13,323,176 bytes | 23 |
+
+The DEX ordinals do not correspond between stock and patched, so
+`classesN.dex` in one cannot be compared to `classesN.dex` in the other.
 
 ## 6. The `rc2_utility_*` bundle is not DJIFCC's code
 

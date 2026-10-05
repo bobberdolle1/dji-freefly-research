@@ -1,0 +1,32 @@
+{
+  "a": {
+    "name": "DJIFCC.APP-Android-arm64-signed-1.21.12.19.apk",
+    "size": 716586363,
+    "entries": 16180
+  },
+  "b": {
+    "name": "DJIFCC.APP-RCPro2-signed-1.21.12.3.apk",
+    "size": 716586363,
+    "entries": 16180
+  },
+  "same_archive_size": true,
+  "entry_name_sets_identical": true,
+  "entries_only_in_a": [],
+  "entries_only_in_b": [],
+  "shared_entry_count": 16180,
+  "differing_entry_count": 6,
+  "differing_entries": [
+    "AndroidManifest.xml",
+    "META-INF/KEY0.RSA",
+    "META-INF/KEY0.SF",
+    "META-INF/MANIFEST.MF",
+    "classes23.dex",
+    "resources.arsc"
+  ],
+  "differing_excluding_signature_and_manifest": [
+    "classes23.dex",
+    "resources.arsc"
+  ],
+  "byte_identical": false,
+  "verdict": "same name set, differing content in 2 payload entries and 4 signature/manifest entries"
+}
